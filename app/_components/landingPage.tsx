@@ -33,15 +33,8 @@ export default function LandingPage() {
           <h1 className="text-4xl font-bold">Welcome to PineChatting</h1>
           <p className="text-lg mt-2">Discover amazing things here</p>
           <div className="flex justify-center gap-4 mt-8">
-            <Link href="/login">
-              <Button className="w-[200px] h-[85px] rounded-3xl text-2xl hover:bg-white hover:text-black">
-                Login
-              </Button>
-            </Link>
-            <Link href="/signup">
-              <Button className="w-[200px] h-[85px] rounded-3xl text-2xl bg-green-600 text-white hover:bg-white hover:text-green-600">
-                Signup
-              </Button>
+            <Link href="/auth">
+              <Button className="w-52 h-16 text-3xl rounded-full hover:bg-green-600">Start</Button>
             </Link>
           </div>
         </div>
