@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { MessageCircleCode } from 'lucide-react';
 import Link from "next/link";
-
+import Image from "next/image";
 export default function LandingPage() {
   return (
     <div>
@@ -21,7 +21,7 @@ export default function LandingPage() {
       </header>
 
       <main className="relative">
-        <img 
+        <Image 
           className="w-full h-screen rounded-3xl mx-auto my-10 object-cover"
           src="landingpage.jpg"
           alt="Landing Page"
