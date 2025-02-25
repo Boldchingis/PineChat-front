@@ -116,13 +116,19 @@ export default function LoginComp() {
 
       {/* Auth Image (Only shown on larger screens) */}
       <div className="hidden md:block flex-1">
-        <Image
-      className="w-full h-screen object-cover rounded-tl-3xl rounded-bl-3xl"
-          src="/clean.png"
-          alt="authpic"
-          width={1920}
-          height={1080}
-        />
+      <Image
+  className="w-full h-screen object-cover rounded-tl-3xl rounded-bl-3xl"
+  src="/clean.png"
+  alt="authpic"
+  width={1920}
+  height={1080}
+  style={{
+    borderLeft: "2px solid black", // Add black left border
+    borderTopLeftRadius: "3.5rem", // Adjust the radius for top left
+    borderBottomLeftRadius: "3.5rem", // Adjust the radius for bottom left
+  }}
+/>
+
       </div>
     </div>
   );
