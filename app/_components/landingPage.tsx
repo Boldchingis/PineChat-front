@@ -24,17 +24,28 @@ export default function LandingPage() {
       <main className="relative">
         <Image 
           className="w-full h-screen rounded-3xl mx-auto my-10 object-cover"
-          src="/landingpage.jpg" // Ensure it's in the 'public' folder
+          src="/landing.jpg" // Ensure it's in the 'public' folder
           alt="Landing Page"
           width={1920}  // Add width
           height={1080} // Add height
         />
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white text-center">
-          <h1 className="text-4xl font-bold">Welcome to PineChatting</h1>
-          <p className="text-lg mt-2">Discover amazing things here</p>
+        <h1 className="text-4xl font-bold text-white" style={{ WebkitTextStroke: "1px black" }}>
+  Welcome to PineChatting
+</h1>
+
+<p className="text-lg mt-2 text-white drop-shadow-[1px_1px_1px_black]">
+  Discover amazing things here
+</p>
+
           <div className="flex justify-center gap-4 mt-8">
             <Link href="/auth">
-              <Button className="w-52 h-16 text-3xl rounded-full hover:bg-green-600">Start</Button>
+            <Button
+  className="w-52 h-16 text-3xl rounded-full border-2 border-transparent hover:bg-white hover:border-green-600 hover:text-green-600 transition duration-300"
+>
+  Start
+</Button>
+
             </Link>
           </div>
         </div>

@@ -4,7 +4,7 @@ import {
   CardContent,
   CardDescription,
   CardFooter,
-  CardHeader,
+  CardHeader, 
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -54,8 +54,8 @@ export default function LoginComp() {
   };
 
   return (
-    <div className="h-screen w-screen flex flex-col md:flex-row justify-center items-center bg-gray-100">
-      <Toaster position="top-center" />
+    <div className="h-screen w-screen flex flex-col md:flex-row justify-center border-none shadow-none items-center bg-gray-100">
+      <Toaster position="top-center" expand={true} />
 
       {/* Login Form */}
       <div className="flex-1 flex justify-center items-center">

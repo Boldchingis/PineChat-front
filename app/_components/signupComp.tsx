@@ -9,7 +9,6 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
 import { useState } from "react";
 import Image from "next/image";
 import { Toaster, toast } from 'sonner';
@@ -27,15 +26,23 @@ export default function SignupComp() {
   };
 
   const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setUsername(value.charAt(0).toUpperCase() + value.slice(1));
+    let value = e.target.value;
+    value = value.charAt(0).toUpperCase() + value.slice(1);
+    if (value.length < 6) {
+      setUsernameError("Username must be at least 6 characters long.");
+      toast.error("Username must be at least 6 characters long.");
+    } else if (value.length > 12) {
+      setUsernameError("Username must be at most 12 characters long.");
+      toast.error("Username must be at most 12 characters long.");
+    } else {
+      setUsernameError("");
+    }
+    setUsername(value.slice(0, 12));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
     let hasError = false;
-
 
     const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!email || !emailRegex.test(email)) {
@@ -46,10 +53,17 @@ export default function SignupComp() {
       setEmailError("");
     }
 
-  
     if (!username || !/^[a-zA-Z]/.test(username)) {
       setUsernameError("Username must start with a letter.");
       toast.error('Username must start with a letter.');
+      hasError = true;
+    } else if (username.length < 6) {
+      setUsernameError("Username must be at least 6 characters long.");
+      toast.error("Username must be at least 6 characters long.");
+      hasError = true;
+    } else if (username.length > 12) {
+      setUsernameError("Username must be at most 12 characters long.");
+      toast.error("Username must be at most 12 characters long.");
       hasError = true;
     } else {
       setUsernameError("");
@@ -72,18 +86,34 @@ export default function SignupComp() {
           </CardHeader>
 
           <CardContent className="flex flex-col gap-4">
-            <Input placeholder="Enter Username" className="border-2 border-gray-300 rounded-lg p-2" />
-            <Input placeholder="Enter Email" className="border-2 border-gray-300 rounded-lg p-2" />
+            <Input
+              placeholder="Enter Username"
+              className={`border-2 p-2 rounded-lg ${usernameError ? 'border-red-500' : 'border-gray-300'}`}
+              value={username}
+              onChange={handleUsernameChange}
+            />
+            <Input
+              placeholder="Enter Email"
+              className={`border-2 p-2 rounded-lg ${emailError ? 'border-red-500' : 'border-gray-300'}`}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
             <div className="flex flex-col gap-2">
-              <Input placeholder="Create Password" type="password" className="border-2 border-gray-300 rounded-lg p-2" />
-              <button type="button" className="text-sm text-blue-600 hover:underline text-end">
-                Show Password
+              <Input
+                placeholder="Create Password"
+                type={showPassword ? "text" : "password"}
+                className="border-2 border-gray-300 rounded-lg p-2"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <button type="button" onClick={togglePasswordVisibility} className="text-sm text-blue-600 hover:underline text-end">
+                {showPassword ? "Hide Password" : "Show Password"}
               </button>
             </div>
           </CardContent>
 
           <CardFooter>
-            <Button className="w-full py-3 hover:bg-green-600 text-white rounded-md">Continue</Button>
+            <Button className="w-full py-3 hover:bg-green-600 text-white rounded-md" onClick={handleSubmit}>Continue</Button>
           </CardFooter>
         </Card>
       </div>
