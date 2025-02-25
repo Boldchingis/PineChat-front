@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import Image from "next/image";
 import { Toaster, toast } from "sonner";
+import Link from "next/link";
 
 export default function LoginComp() {
   const [showPassword, setShowPassword] = useState(false);
@@ -87,13 +88,18 @@ export default function LoginComp() {
                   passwordError ? "border-red-500" : "border-gray-300"
                 }`}
               />
-              <button
-                type="button"
-                onClick={togglePasswordVisibility}
-                className="text-sm text-blue-600 hover:underline text-end"
-              >
-                {showPassword ? "Hide Password" : "Show Password"}
-              </button>
+              <div className="flex justify-between items-center">
+                <Link href="/auth/forgotpassword">
+                  <div className="text-sm text-black hover:underline">Forgot password?</div>
+                </Link>
+                <button
+                  type="button"
+                  onClick={togglePasswordVisibility}
+                  className="text-sm text-blue-600 hover:underline"
+                >
+                  {showPassword ? "Hide Password" : "Show Password"}
+                </button>
+              </div>
             </div>
           </CardContent>
 
@@ -111,8 +117,8 @@ export default function LoginComp() {
       {/* Auth Image (Only shown on larger screens) */}
       <div className="hidden md:block flex-1">
         <Image
-          className="w-full h-screen object-cover"
-          src="/auth.png"
+      className="w-full h-screen object-cover rounded-tl-3xl rounded-bl-3xl"
+          src="/clean.png"
           alt="authpic"
           width={1920}
           height={1080}

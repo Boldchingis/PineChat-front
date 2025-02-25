@@ -120,8 +120,8 @@ export default function SignupComp() {
 
       <div className="hidden md:block flex-1">
         <Image
-          className="w-full h-screen object-cover"
-          src="/auth.png"
+          className="w-full h-screen object-cover rounded-tl-3xl rounded-bl-3xl"
+          src="/clean.png"
           alt="authpic"
           width={1920}
           height={1080}
