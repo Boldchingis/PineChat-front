@@ -8,119 +8,81 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import Image from "next/image";
-import { Toaster, toast } from 'sonner';
+import { Toaster, toast } from "sonner";
 
 export default function SignupComp() {
   const [showPassword, setShowPassword] = useState(false);
-  const [username, setUsername] = useState("");
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [usernameError, setUsernameError] = useState("");
-  const [emailError, setEmailError] = useState("");
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
 
-  const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value;
-    value = value.charAt(0).toUpperCase() + value.slice(1);
-    if (value.length < 6) {
-      setUsernameError("Username must be at least 6 characters long.");
-      toast.error("Username must be at least 6 characters long.");
-    } else if (value.length > 12) {
-      setUsernameError("Username must be at most 12 characters long.");
-      toast.error("Username must be at most 12 characters long.");
-    } else {
-      setUsernameError("");
-    }
-    setUsername(value.slice(0, 12));
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    let hasError = false;
+
+    if (!name || name.length < 6 || name.length > 12) {
+      toast.error("Name must be between 6-12 characters.");
+      return;
+    }
 
     const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!email || !emailRegex.test(email)) {
-      setEmailError("Please enter a correct email address.");
-      toast.error('Please enter a correct email address.');
-      hasError = true;
-    } else {
-      setEmailError("");
+      toast.error("Invalid email format.");
+      return;
     }
 
-    if (!username || !/^[a-zA-Z]/.test(username)) {
-      setUsernameError("Username must start with a letter.");
-      toast.error('Username must start with a letter.');
-      hasError = true;
-    } else if (username.length < 6) {
-      setUsernameError("Username must be at least 6 characters long.");
-      toast.error("Username must be at least 6 characters long.");
-      hasError = true;
-    } else if (username.length > 12) {
-      setUsernameError("Username must be at most 12 characters long.");
-      toast.error("Username must be at most 12 characters long.");
-      hasError = true;
-    } else {
-      setUsernameError("");
-    }
+    try {
+      const response = await fetch("http://localhost:5000/api/users/sign-up", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      });
 
-    if (!hasError) {
-      console.log("Form submitted", { username, email, password });
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success("Account created successfully!");
+      } else {
+        toast.error(data.message || "Sign-up failed");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      toast.error("Something went wrong, please try again.");
     }
   };
 
   return (
-    <div className="h-screen w-screen flex flex-col md:flex-row justify-center items-center bg-gray-100">
+    <div className="h-screen w-screen flex justify-center items-center bg-gray-100">
       <Toaster position="top-center" expand={true} />
+      <Card className="w-[90%] sm:w-[400px] border-none mx-auto">
+        <CardHeader>
+          <CardTitle className="text-2xl font-semibold">Get Started Now</CardTitle>
+          <CardDescription>Message privately</CardDescription>
+        </CardHeader>
 
-      <div className="flex-1 flex justify-center items-center">
-        <Card className="w-[90%] sm:w-[400px] border-none mx-auto">
-          <CardHeader className="text-start">
-            <CardTitle className="text-2xl font-semibold">Get Started Now</CardTitle>
-            <CardDescription className="text-sm text-gray-500">Message privately</CardDescription>
-          </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <Input placeholder="Enter Name" value={name} onChange={(e) => setName(e.target.value)} />
+          <Input placeholder="Enter Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <div>
+            <Input placeholder="Create Password" type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} />
+            <button onClick={togglePasswordVisibility} className="text-sm text-blue-600 hover:underline text-end">
+              {showPassword ? "Hide Password" : "Show Password"}
+            </button>
+          </div>
+        </CardContent>
 
-          <CardContent className="flex flex-col gap-4">
-            <Input
-              placeholder="Enter Username"
-              className={`border-2 p-2 rounded-lg ${usernameError ? 'border-red-500' : 'border-gray-300'}`}
-              value={username}
-              onChange={handleUsernameChange}
-            />
-            <Input
-              placeholder="Enter Email"
-              className={`border-2 p-2 rounded-lg ${emailError ? 'border-red-500' : 'border-gray-300'}`}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-            <div className="flex flex-col gap-2">
-              <Input
-                placeholder="Create Password"
-                type={showPassword ? "text" : "password"}
-                className="border-2 border-gray-300 rounded-lg p-2"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-              <button type="button" onClick={togglePasswordVisibility} className="text-sm text-blue-600 hover:underline text-end">
-                {showPassword ? "Hide Password" : "Show Password"}
-              </button>
-            </div>
-          </CardContent>
-
-          <CardFooter>
-            <Button className="w-full py-3 hover:bg-green-600 text-white rounded-md" onClick={handleSubmit}>Continue</Button>
-          </CardFooter>
-        </Card>
-      </div>
-
-      <div className="hidden md:block flex-1">
-          <Image
-      className="w-full h-screen object-cover rounded-tl-3xl rounded-bl-3xl"
+        <CardFooter>
+          <Button className="w-full" onClick={handleSubmit}>Continue</Button>
+        </CardFooter>
+      </Card>
+      <Image
+      className="w-1/2 h-screen object-cover rounded-tl-3xl rounded-bl-3xl"
       src="/clean.png"
       alt="authpic"
       width={1920}
@@ -131,7 +93,6 @@ export default function SignupComp() {
         borderBottomLeftRadius: "3.5rem", // Adjust the radius for bottom left
       }}
     />
-      </div>
     </div>
   );
 }
