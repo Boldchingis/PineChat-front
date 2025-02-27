@@ -1,10 +1,11 @@
 "use client";
+
 import {
   Card,
   CardContent,
   CardDescription,
   CardFooter,
-  CardHeader, 
+  CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { Toaster, toast } from "sonner";
 import Link from "next/link";
+import { useRouter } from "next/navigation"; 
 
 export default function LoginComp() {
   const [showPassword, setShowPassword] = useState(false);
@@ -20,17 +22,19 @@ export default function LoginComp() {
   const [password, setPassword] = useState("");
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [loading, setLoading] = useState(false); // State for loading
+
+  const router = useRouter(); 
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     let hasError = false;
 
-    // Validate Email
     const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!email || !emailRegex.test(email)) {
       setEmailError("Please enter a valid email address.");
@@ -40,7 +44,6 @@ export default function LoginComp() {
       setEmailError("");
     }
 
-    // Validate Password
     if (!password) {
       setPasswordError("Password is required.");
       toast.error("Password is required.");
@@ -50,15 +53,37 @@ export default function LoginComp() {
     }
 
     if (!hasError) {
-      console.log("Form submitted", { email, password });
+      setLoading(true); // Start loading
+      try {
+        const response = await fetch("http://localhost:5000/users/sign-in", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email, password }),
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          toast.success("Signed in successfully!");
+          console.log("User Data:", data.data);
+          router.push("/home");
+        } else {
+          toast.error(data.message);
+        }
+      } catch (error) {
+        console.error("Error during sign-in:", error);
+        toast.error("Something went wrong, please try again.");
+      } finally {
+        setLoading(false); // End loading
+      }
     }
   };
 
   return (
     <div className="h-screen w-screen flex flex-col md:flex-row justify-center border-none shadow-none items-center bg-gray-100">
       <Toaster position="top-center" expand={true} />
-
-      {/* Login Form */}
       <div className="flex-1 flex justify-center items-center">
         <Card className="w-[90%] sm:w-[400px] border-none mx-auto">
           <CardHeader className="text-start">
@@ -106,29 +131,34 @@ export default function LoginComp() {
           <CardFooter>
             <Button
               onClick={handleSubmit}
-              className="w-full py-3 hover:bg-green-600 text-white rounded-md"
+              className="w-full py-3 text-white rounded-md relative"
+              disabled={loading} // Disable button while loading
             >
-              Continue
+              {loading ? (
+                <div className="flex justify-center items-center">
+                  <div className="w-6 h-6 border-4 border-t-transparent border-blue-500 rounded-full animate-spin"></div>
+                </div>
+              ) : (
+                "Continue"
+              )}  
             </Button>
           </CardFooter>
         </Card>
       </div>
 
-      {/* Auth Image (Only shown on larger screens) */}
       <div className="hidden md:block flex-1">
-      <Image
-  className="w-full h-screen object-cover rounded-tl-3xl rounded-bl-3xl"
-  src="/clean.png"
-  alt="authpic"
-  width={1920}
-  height={1080}
-  style={{
-    borderLeft: "2px solid black", // Add black left border
-    borderTopLeftRadius: "3.5rem", // Adjust the radius for top left
-    borderBottomLeftRadius: "3.5rem", // Adjust the radius for bottom left
-  }}
-/>
-
+        <Image
+          className="w-full h-screen object-cover rounded-tl-3xl rounded-bl-3xl"
+          src="/clean.png"
+          alt="authpic"
+          width={1920}
+          height={1080}
+          style={{
+            borderLeft: "2px solid black", 
+            borderTopLeftRadius: "3.5rem", 
+            borderBottomLeftRadius: "3.5rem",
+          }}
+        />
       </div>
     </div>
   );
