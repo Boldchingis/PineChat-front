@@ -68,7 +68,7 @@ export default function LoginComp() {
         if (data.success) {
           toast.success("Signed in successfully!");
           console.log("User Data:", data.data);
-          router.push("/home");
+          router.push("/profile");
         } else {
           toast.error(data.message);
         }

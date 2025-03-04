@@ -24,7 +24,7 @@ export default function LandingPage() {
       <main className="relative">
         <Image 
           className="w-full h-screen rounded-3xl mx-auto my-10 object-cover"
-          src="/landing.jpg" // Ensure it's in the 'public' folder
+          src="/clean.png" // Ensure it's in the 'public' folder
           alt="Landing Page"
           width={1920}  // Add width
           height={1080} // Add height
@@ -41,7 +41,7 @@ export default function LandingPage() {
           <div className="flex justify-center gap-4 mt-8">
             <Link href="/auth">
             <Button
-  className="w-52 h-16 text-3xl rounded-full border-2 border-transparent hover:bg-white hover:border-green-600 hover:text-green-600 transition duration-300"
+  className="w-52 h-16 text-3xl rounded-full border-2 border-transparent hover:bg-green-600 transition duration-300"
 >
   Start
 </Button>
