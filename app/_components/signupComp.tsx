@@ -30,70 +30,81 @@ export default function SignupComp() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    let hasError = false;
-
-    
+  
+    // Reset errors
     setNameError("");
     setEmailError("");
     setPasswordError("");
-
-    
+  
+    let hasError = false;
+  
+    // Validate name
     if (!name || name.length < 6 || name.length > 12) {
-      setNameError("Name must be between 6-12 characters.");
-      toast.error("Name must be between 6-12 characters.");
+      const msg = "Name must be between 6-12 characters.";
+      setNameError(msg);
+      toast.error(msg);
       hasError = true;
     }
-
-    
+  
+    // Validate email
     const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!email || !emailRegex.test(email)) {
-      setEmailError("Invalid email format.");
-      toast.error("Invalid email format.");
+      const msg = "Invalid email format.";
+      setEmailError(msg);
+      toast.error(msg);
       hasError = true;
     }
-
-    
+  
+    // Validate password
     if (!password || password.length < 6) {
-      setPasswordError("Password must be at least 6 characters.");
-      toast.error("Password must be at least 6 characters.");
+      const msg = "Password must be at least 6 characters.";
+      setPasswordError(msg);
+      toast.error(msg);
       hasError = true;
     }
-
-    
+  
     if (hasError) return;
-
-    setLoading(true); 
-
+  
+    setLoading(true);
+  
     try {
       const response = await fetch("http://localhost:5000/users/create-user", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({ name, email, password }),
       });
-
+  
+      const text = await response.text();
+  
       if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
+        try {
+          const errData = JSON.parse(text);
+          toast.error(errData.message || `Signup failed (Status ${response.status})`);
+        } catch {
+          toast.error(`Unexpected server error (Status ${response.status})`);
+        }
+        return;
       }
-
-      const data = await response.json();
-
+  
+      const data = JSON.parse(text);
+  
       if (data.success) {
-        // Store tokens in localStorage
         localStorage.setItem("accessToken", data.tokens.accessToken);
         localStorage.setItem("refreshToken", data.tokens.refreshToken);
-
         toast.success("Account created successfully!");
       } else {
         toast.error(data.message || "Sign-up failed");
       }
     } catch (error) {
-      console.error("Error:", error);
+      console.error("Network or unknown error:", error);
       toast.error("Something went wrong, please try again.");
     } finally {
-      setLoading(false); // End loading state
+      setLoading(false);
     }
   };
+  
 
   return (
     <div className="h-screen w-screen flex justify-center items-center bg-gray-100">

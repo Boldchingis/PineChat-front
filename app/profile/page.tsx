@@ -1,5 +1,7 @@
-import CreatePro from "../_components/createpro"
-export default function CreateProFile(){
-    return(
-<div><CreatePro/></div>    )
+import ProfileManager from "../_components/createpro"
+
+export default function ProfilePage() {
+  return (
+    <ProfileManager />
+  )
 }

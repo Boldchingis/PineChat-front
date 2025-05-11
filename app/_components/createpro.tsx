@@ -3,26 +3,82 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Camera } from "lucide-react";
+import { Camera, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import LoadingAnimation from "@/public/Load.json";
 import { Toaster, toast } from "sonner";
 const Lottie = dynamic(() => import("lottie-react"), { ssr: false });
 
-export default function CreatePro() {
+export default function ProfileManager() {
     const [image, setImage] = useState<string | null>(null);
+    const [name, setName] = useState("");
     const [loading, setLoading] = useState(false);
-    const [errors, setErrors] = useState<{ image: boolean; phone: boolean; bio: boolean }>({
+    const [initialLoading, setInitialLoading] = useState(true);
+    const [errors, setErrors] = useState({
         image: false,
-        phone: false,
-        bio: false,
+        name: false,
+        about: false,
     });
-    const [phone, setPhone] = useState("+976");
-    const [bio, setBio] = useState("");
+    const [about, setAbout] = useState("");
+    const [isEditing, setIsEditing] = useState(false);
+    const [profileExists, setProfileExists] = useState(false);
+
+    const router = useRouter();
+
+    // Fetch user profile data
+    useEffect(() => {
+        const fetchProfileData = async () => {
+            try {
+                const token = localStorage.getItem("accessToken");
+                if (!token) {
+                    router.push("/auth");
+                    return;
+                }
+
+                const response = await fetch("http://localhost:5000/profile/", {
+                    headers: {
+                        "Authorization": `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        localStorage.removeItem("accessToken");
+                        localStorage.removeItem("refreshToken");
+                        router.push("/auth");
+                        return;
+                    }
+                    throw new Error("Failed to fetch profile");
+                }
+
+                const data = await response.json();
+                if (data.success) {
+                    // User has a profile
+                    setName(data.data.name || "");
+
+                    if (data.data.profile) {
+                        setImage(data.data.profile.image || null);
+                        setAbout(data.data.profile.about || "");
+                        setProfileExists(true);
+                    } else {
+                        setProfileExists(false);
+                    }
+                }
+            } catch (error) {
+                toast.error("Failed to load profile data");
+                console.error(error);
+            } finally {
+                setInitialLoading(false);
+            }
+        };
+
+        fetchProfileData();
+    }, [router]);
 
     // Handle image upload to Cloudinary
     const handleImageUpload = async (file: File) => {
@@ -32,196 +88,281 @@ export default function CreatePro() {
             return;
         }
 
-        if (file.size > 2 * 1024 * 1024) { // 2MB limit
+        if (file.size > 5 * 1024 * 1024) { // 5MB limit
             setErrors((prev) => ({ ...prev, image: true }));
-            toast.error("Image size is too large. Max size is 2MB.");
+            toast.error("Image size is too large. Max size is 5MB.");
             return;
         }
 
         setLoading(true);
 
+        // Get Cloudinary configuration from environment variables
+        const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || "duhir31qk";
+        const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "ml_default";
+
         // Form data to send to Cloudinary
         const formData = new FormData();
         formData.append("file", file);
-        formData.append("upload_preset", "unsigned_preset"); // Use your Cloudinary preset  
-        formData.append("cloud_name", "duhir31qk"); // Cloud name
+        formData.append("upload_preset", uploadPreset);
+        formData.append("cloud_name", cloudName);
 
         try {
-            const response = await fetch("https://api.cloudinary.com/v1_1/duhir31qk/image/upload", {
+            // Use the real Cloudinary endpoint with your cloud name
+            const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
                 method: "POST",
                 body: formData,
             });
 
             const data = await response.json();
             if (data.secure_url) {
-                setImage(data.secure_url); // Set the uploaded image URL
+                setImage(data.secure_url);
+                setIsEditing(true);
                 toast.success("Image uploaded successfully!");
             } else {
                 toast.error("Failed to upload image.");
             }
         } catch (error) {
-            toast.error("Error uploading image.");
+            console.error("Error uploading image:", error);
+            toast.error("Error uploading image. Please try again.");
         } finally {
             setLoading(false);
         }
-    };
-
-    // Handle phone input change (prepend +976)
-    const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        let inputValue = e.target.value;
-
-        // Ensure the phone number starts with +976
-        if (!inputValue.startsWith("+976")) {
-            inputValue = "+976" + inputValue.replace(/^(\+976)?/, "");
-        }
-
-        setPhone(inputValue);
     };
 
     // Handle form submission
     const handleSubmit = async () => {
         let hasError = false;
 
-        // Check if image is uploaded
-        if (!image) {
-            setErrors((prev) => ({ ...prev, image: true }));
+        // Validate name
+        if (!name.trim() || name.trim().length < 3) {
+            setErrors((prev) => ({ ...prev, name: true }));
+            toast.error("Name must be at least 3 characters");
             hasError = true;
-            toast.error("Please upload a profile picture.");
+        } else {
+            setErrors((prev) => ({ ...prev, name: false }));
+        }
+
+        // Check if image is required (for new profiles)
+        if (!profileExists && !image) {
+            setErrors((prev) => ({ ...prev, image: true }));
+            toast.error("Please upload a profile picture");
+            hasError = true;
         } else {
             setErrors((prev) => ({ ...prev, image: false }));
         }
 
-        // Validate phone number
-        if (!/^\+976\d{8,10}$/.test(phone)) {
-            setErrors((prev) => ({ ...prev, phone: true }));
+        // Validate about
+        if (!about.trim() || about.trim().length < 10) {
+            setErrors((prev) => ({ ...prev, about: true }));
+            toast.error("About must be at least 10 characters");
             hasError = true;
-            toast.error("Please enter a valid phone number.");
         } else {
-            setErrors((prev) => ({ ...prev, phone: false }));
-        }
-
-        // Validate bio
-        if (bio.trim().length < 10) {
-            setErrors((prev) => ({ ...prev, bio: true }));
-            hasError = true;
-            toast.error("Bio must be at least 10 characters.");
-        } else {
-            setErrors((prev) => ({ ...prev, bio: false }));
+            setErrors((prev) => ({ ...prev, about: false }));
         }
 
         if (hasError) return;
 
         setLoading(true);
+
+        // Prepare the data
         const profileData = {
-            image,
-            phone,
-            bio,
+            name,
+            about,
+            ...(image && { image }),
         };
 
+        const token = localStorage.getItem("accessToken");
+        if (!token) {
+            toast.error("You are not authenticated");
+            router.push("/auth");
+            return;
+        }
+
         try {
-            const response = await fetch("http://localhost:5000/profile/create-profile", {  // Your backend endpoint
-                method: "POST",
+            // Determine whether to create or update
+            const endpoint = profileExists
+                ? "http://localhost:5000/profile/update"
+                : "http://localhost:5000/profile/create";
+
+            const method = profileExists ? "PUT" : "POST";
+
+            const response = await fetch(endpoint, {
+                method: method,
                 headers: {
                     "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
                 },
                 body: JSON.stringify(profileData),
             });
 
             const data = await response.json();
 
-            if (response.ok) {
-                toast.success("Profile created successfully!");
+            if (data.success) {
+                toast.success(profileExists
+                    ? "Profile updated successfully!"
+                    : "Profile created successfully!");
+
+                setProfileExists(true);
+                setIsEditing(false);
+
+                // Redirect to chat after creating profile
+                if (!profileExists) {
+                    setTimeout(() => {
+                        router.push("/home");
+                    }, 1500);
+                }
             } else {
-                toast.error(data.message || "Failed to create profile.");
+                toast.error(data.message || "Failed to save profile");
             }
         } catch (error) {
-            toast.error("Error submitting profile data.");
+            console.error("Error saving profile:", error);
+            toast.error("Error saving profile. Please try again.");
         } finally {
             setLoading(false);
         }
     };
 
+    if (initialLoading) {
+        return (
+            <div className="flex justify-center items-center h-screen bg-gray-50">
+                <div className="w-20 h-20">
+                    <Lottie animationData={LoadingAnimation} />
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <div className="w-full max-w-md mx-auto my-10 p-6">
-            <Toaster position="top-center" expand={true} />
-            <Card className="shadow-lg">
-                <CardHeader>
-                    <CardTitle className="text-center text-xl font-semibold">
-                        Create Your Profile
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-col items-center gap-4">
-                    {/* Image Upload */}
-                    <label htmlFor="fileInput" className="cursor-pointer">
-                        <div
-                            className={`border-2 border-dashed rounded-full w-40 h-40 flex justify-center items-center overflow-hidden transition-all ${
-                                errors.image ? "border-red-500" : "border-gray-300"
-                            }`}
-                            aria-live="polite"
-                        >
-                            {image ? (
-                                <img src={image} alt="Profile" className="w-full h-full object-cover" />
-                            ) : loading ? (
-                                <Lottie animationData={LoadingAnimation} />
-                            ) : (
-                                <Camera className="text-gray-400 w-10 h-10" />
-                            )}
-                        </div>
-                    </label>
-                    <Input
-                        type="file"
-                        id="fileInput"
-                        className="hidden"
-                        accept="image/*"
-                        onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) handleImageUpload(file);
-                        }}
-                    />
-                </CardContent>
+        <div className="bg-gray-50 min-h-screen py-10 px-4">
+            <Toaster position="top-center" />
 
-                {/* Phone & Bio Inputs */}
-                <CardContent className="flex flex-col gap-4">
-                    <div>
-                        <Input
-                            placeholder="Enter your phone number"
-                            className={`py-2 px-3 border rounded-md w-full transition-all ${
-                                errors.phone ? "border-red-500" : "border-gray-300"
-                            }`}
-                            value={phone}
-                            onChange={handlePhoneChange}
-                        />
-                    </div>
+            <div className="max-w-md mx-auto">
+                <Button
+                    variant="ghost"
+                    className="mb-4"
+                    onClick={() => router.push("/home")}
+                >
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back to Chat
+                </Button>
 
-                    <div>
-                        <Textarea
-                            placeholder="Tell us about yourself"
-                            className={`py-2 px-3 border rounded-md w-full transition-all ${
-                                errors.bio ? "border-red-500" : "border-gray-300"
-                            }`}
-                            value={bio}
-                            onChange={(e) => setBio(e.target.value)}
-                        />
-                    </div>
-                </CardContent>
+                <Card className="shadow-md">
+                    <CardHeader>
+                        <CardTitle className="text-center text-xl font-semibold">
+                            {profileExists ? "Your Profile" : "Create Your Profile"}
+                        </CardTitle>
+                    </CardHeader>
 
-                {/* Submit Button */}
-                <CardFooter>
-                    <Button
-                        onClick={handleSubmit}
-                        className="w-full py-3 text-white rounded-md transition-all disabled:bg-gray-800"
-                        disabled={loading}
-                    >
-                        {loading ? (
-                            <div className="flex justify-center items-center">
-                                <div className="w-6 h-6 border-4 border-t-transparent border-white rounded-full animate-spin"></div>
+                    <CardContent className="flex flex-col items-center gap-4">
+                        {/* Profile Image */}
+                        <label htmlFor="fileInput" className="cursor-pointer">
+                            <div
+                                className={`border-2 ${isEditing || !profileExists ? 'border-dashed' : 'border-solid'}
+                                ${errors.image ? "border-red-500" : "border-gray-300"}
+                                rounded-full w-40 h-40 flex justify-center items-center overflow-hidden transition-all`}
+                            >
+                                {image ? (
+                                    <img src={image} alt="Profile" className="w-full h-full object-cover" />
+                                ) : loading ? (
+                                    <div className="w-20 h-20">
+                                        <Lottie animationData={LoadingAnimation} />
+                                    </div>
+                                ) : (
+                                    <Camera className="text-gray-400 w-10 h-10" />
+                                )}
                             </div>
+                            <p className="text-center text-sm text-gray-500 mt-2">
+                                {isEditing || !profileExists ? "Click to upload image" : ""}
+                            </p>
+                        </label>
+                        <Input
+                            type="file"
+                            id="fileInput"
+                            className="hidden"
+                            accept="image/*"
+                            onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleImageUpload(file);
+                            }}
+                        />
+                    </CardContent>
+
+                    {/* Profile Details */}
+                    <CardContent className="flex flex-col gap-4">
+                        <div>
+                            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                                Name
+                            </label>
+                            <Input
+                                id="name"
+                                placeholder="Enter your name"
+                                className={`${errors.name ? "border-red-500" : "border-gray-300"}`}
+                                value={name}
+                                onChange={(e) => {
+                                    setName(e.target.value);
+                                    setIsEditing(true);
+                                }}
+                                disabled={loading || (!isEditing && profileExists)}
+                            />
+                        </div>
+
+                        <div>
+                            <label htmlFor="about" className="block text-sm font-medium text-gray-700 mb-1">
+                                About
+                            </label>
+                            <Textarea
+                                id="about"
+                                placeholder="Tell us about yourself"
+                                className={`resize-none ${errors.about ? "border-red-500" : "border-gray-300"}`}
+                                value={about}
+                                onChange={(e) => {
+                                    setAbout(e.target.value);
+                                    setIsEditing(true);
+                                }}
+                                rows={4}
+                                disabled={loading || (!isEditing && profileExists)}
+                            />
+                        </div>
+                    </CardContent>
+
+                    {/* Buttons */}
+                    <CardFooter className="flex gap-3">
+                        {profileExists && !isEditing ? (
+                            <Button
+                                onClick={() => setIsEditing(true)}
+                                className="w-full"
+                                variant="outline"
+                            >
+                                Edit Profile
+                            </Button>
                         ) : (
-                            "Continue"
+                            <>
+                                {profileExists && (
+                                    <Button
+                                        onClick={() => setIsEditing(false)}
+                                        className="flex-1"
+                                        variant="outline"
+                                        disabled={loading}
+                                    >
+                                        Cancel
+                                    </Button>
+                                )}
+                                <Button
+                                    onClick={handleSubmit}
+                                    className="flex-1"
+                                    disabled={loading}
+                                >
+                                    {loading ? (
+                                        <div className="flex justify-center items-center">
+                                            <div className="w-5 h-5 border-2 border-t-transparent border-white rounded-full animate-spin"></div>
+                                        </div>
+                                    ) : profileExists ? "Save Changes" : "Create Profile"}
+                                </Button>
+                            </>
                         )}
-                    </Button>
-                </CardFooter>
-            </Card>
+                    </CardFooter>
+                </Card>
+            </div>
         </div>
     );
 }

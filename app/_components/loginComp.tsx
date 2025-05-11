@@ -66,9 +66,19 @@ export default function LoginComp() {
         const data = await response.json();
 
         if (data.success) {
+          // Store tokens in localStorage
+          localStorage.setItem("accessToken", data.tokens.accessToken);
+          localStorage.setItem("refreshToken", data.tokens.refreshToken);
+
           toast.success("Signed in successfully!");
           console.log("User Data:", data.data);
-          router.push("/profile");
+
+          // Check if user has profile and redirect accordingly
+          if (data.data.profile) {
+            router.push("/home");
+          } else {
+            router.push("/profile");
+          }
         } else {
           toast.error(data.message);
         }

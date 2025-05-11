@@ -1,40 +1,45 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { MessageCircleCode, Users, Settings, LogOut, Plus, User } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { useRouter } from 'next/navigation';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Search, UserPlus } from 'lucide-react';
+import { useRouter } from "next/navigation";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Toaster, toast } from "sonner";
 import algoliaService from "@/lib/algolia";
 
-export default function SideBar() {
-  const [activeIcon, setActiveIcon] = useState('chats');
-  const [userProfile, setUserProfile] = useState<any>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
+export default function ChatList() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [chats, setChats] = useState<any[]>([]);
+  const [filteredChats, setFilteredChats] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchUsers, setSearchUsers] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const router = useRouter();
 
+  // Fetch chats
   useEffect(() => {
-    const fetchUserProfile = async () => {
+    const fetchChats = async () => {
       try {
         const token = localStorage.getItem("accessToken");
+        const userId = localStorage.getItem("userId");
+        
         if (!token) {
           router.push("/auth");
           return;
         }
 
-        const response = await fetch("http://localhost:5000/profile", {
+        const response = await fetch("http://localhost:5000/chats", {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -45,29 +50,40 @@ export default function SideBar() {
             localStorage.removeItem("accessToken");
             router.push("/auth");
           }
-          return;
+          throw new Error("Failed to fetch chats");
         }
 
         const data = await response.json();
+        
         if (data.success) {
-          setUserProfile(data.data);
+          setChats(data.data);
+          setFilteredChats(data.data);
         }
       } catch (error) {
-        console.error("Error fetching user profile:", error);
+        console.error("Error fetching chats:", error);
+        toast.error("Failed to load chats");
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchUserProfile();
+    fetchChats();
   }, [router]);
 
-  const handleLogout = () => {
-    // Clear local storage
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('userId');
-    // Redirect to login page
-    router.push('/auth');
-  };
+  // Filter chats when search query changes
+  useEffect(() => {
+    if (searchQuery.trim() === "") {
+      setFilteredChats(chats);
+      return;
+    }
+
+    const filtered = chats.filter(chat => 
+      chat.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (chat.messages[0]?.content && chat.messages[0]?.content.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+    
+    setFilteredChats(filtered);
+  }, [searchQuery, chats]);
 
   // Search for users to start new chat using Algolia
   const handleUserSearch = async () => {
@@ -116,7 +132,7 @@ export default function SideBar() {
       }
 
       // Fall back to standard search if all else fails
-      const response = await fetch(`http://localhost:5000/chats/search/users?query=${encodeURIComponent(searchUsers)}`, {
+      const response = await fetch(`http://localhost:5000/chat/search/users?query=${encodeURIComponent(searchUsers)}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -145,7 +161,7 @@ export default function SideBar() {
   const startChat = async (userId: number) => {
     try {
       const token = localStorage.getItem("accessToken");
-
+      
       if (!token) {
         router.push("/auth");
         return;
@@ -168,9 +184,17 @@ export default function SideBar() {
       }
 
       const data = await response.json();
-
+      
       if (data.success) {
         setDialogOpen(false);
+        // Refresh chat list
+        const updatedChats = [...chats];
+        if (!chats.some(chat => chat.id === data.data.id)) {
+          updatedChats.unshift(data.data);
+          setChats(updatedChats);
+          setFilteredChats(updatedChats);
+        }
+        
         // Navigate to the chat
         router.push(`/chat/${data.data.id}`);
       } else {
@@ -182,87 +206,64 @@ export default function SideBar() {
     }
   };
 
+  const formatLastMessage = (chat: any) => {
+    if (!chat.messages || chat.messages.length === 0) {
+      return "No messages yet";
+    }
+    
+    const lastMessage = chat.messages[0];
+    return lastMessage.content.length > 30 
+      ? `${lastMessage.content.substring(0, 30)}...` 
+      : lastMessage.content;
+  };
+
+  const formatTime = (timestamp: string) => {
+    if (!timestamp) return "";
+    
+    const date = new Date(timestamp);
+    const now = new Date();
+    
+    // Today
+    if (date.toDateString() === now.toDateString()) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    
+    // Yesterday
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    if (date.toDateString() === yesterday.toDateString()) {
+      return "Yesterday";
+    }
+    
+    // Within last week
+    const weekAgo = new Date(now);
+    weekAgo.setDate(now.getDate() - 7);
+    if (date > weekAgo) {
+      return date.toLocaleDateString(undefined, { weekday: 'short' });
+    }
+    
+    // Earlier
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  };
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex justify-center items-center">
+        <div className="w-8 h-8 border-4 border-t-transparent border-blue-500 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="h-full w-20 bg-white border-r border-gray-200 flex flex-col items-center py-6">
+    <div className="w-full h-full flex flex-col">
       <Toaster position="top-center" />
-
-      {/* User avatar with dropdown */}
-      <div className="mb-8">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="p-0 hover:bg-transparent relative">
-              <div className="relative">
-                <Avatar className="w-12 h-12">
-                  <AvatarImage src={userProfile?.profile?.image || ""} />
-                  <AvatarFallback>
-                    {userProfile?.name
-                      ? userProfile.name.substring(0, 2).toUpperCase()
-                      : "UN"}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-white"></div>
-              </div>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => router.push('/profile')}>
-              <User className="mr-2 h-4 w-4" />
-              Profile
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setActiveIcon('settings')}>
-              <Settings className="mr-2 h-4 w-4" />
-              Settings
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleLogout} className="text-red-600">
-              <LogOut className="mr-2 h-4 w-4" />
-              Log out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
-      {/* Navigation icons */}
-      <div className="flex flex-col items-center gap-8 mt-2">
-        <Button
-          variant="ghost"
-          size="icon"
-          className={`p-3 rounded-xl ${activeIcon === 'chats' ? 'bg-blue-100 text-blue-600' : 'text-gray-500 hover:text-gray-900'}`}
-          onClick={() => {
-            setActiveIcon('chats');
-            router.push('/home');
-          }}
-        >
-          <MessageCircleCode className="h-6 w-6" />
-        </Button>
-
-        <Button
-          variant="ghost"
-          size="icon"
-          className={`p-3 rounded-xl ${activeIcon === 'users' ? 'bg-blue-100 text-blue-600' : 'text-gray-500 hover:text-gray-900'}`}
-          onClick={() => setActiveIcon('users')}
-        >
-          <Users className="h-6 w-6" />
-        </Button>
-
-        <Button
-          variant="ghost"
-          size="icon"
-          className={`p-3 rounded-xl ${activeIcon === 'settings' ? 'bg-blue-100 text-blue-600' : 'text-gray-500 hover:text-gray-900'}`}
-          onClick={() => setActiveIcon('settings')}
-        >
-          <Settings className="h-6 w-6" />
-        </Button>
-      </div>
-
-      {/* New chat button */}
-      <div className="mt-auto">
+      <header className="p-4 border-b border-gray-200 flex justify-between items-center">
+        <h1 className="text-xl font-bold text-gray-800">Chats</h1>
+        
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button
-              size="icon"
-              className="rounded-full bg-blue-600 hover:bg-blue-700 h-12 w-12 shadow-md"
-            >
-              <Plus className="h-6 w-6" />
+            <Button variant="ghost" size="icon" className="text-gray-500">
+              <UserPlus className="h-5 w-5" />
             </Button>
           </DialogTrigger>
           <DialogContent>
@@ -278,18 +279,18 @@ export default function SideBar() {
                   onChange={(e) => setSearchUsers(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleUserSearch()}
                 />
-                <Button
+                <Button 
                   onClick={handleUserSearch}
                   className="absolute right-0 rounded-l-none"
                   disabled={searching || !searchUsers.trim()}
                 >
-                  {searching ?
+                  {searching ? 
                     <div className="h-4 w-4 border-2 border-t-transparent border-white rounded-full animate-spin"></div> :
                     "Search"
                   }
                 </Button>
               </div>
-
+              
               <div className="max-h-60 overflow-y-auto">
                 {searchResults.length === 0 ? (
                   <p className="text-center text-gray-500 py-4">
@@ -298,7 +299,7 @@ export default function SideBar() {
                 ) : (
                   <div className="space-y-2">
                     {searchResults.map(user => (
-                      <div
+                      <div 
                         key={user.id}
                         className="p-2 flex items-center hover:bg-gray-100 rounded-lg cursor-pointer"
                         onClick={() => startChat(user.id)}
@@ -319,6 +320,56 @@ export default function SideBar() {
             </div>
           </DialogContent>
         </Dialog>
+      </header>
+
+      <div className="p-2">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Input
+            className="pl-10 text-sm text-gray-800 bg-gray-100 border-none"
+            placeholder="Search conversations..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto">
+        {filteredChats.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full p-4">
+            <p className="text-gray-500 mb-4">No chats found</p>
+            <Button onClick={() => setDialogOpen(true)}>
+              Start a new conversation
+            </Button>
+          </div>
+        ) : (
+          filteredChats.map(chat => (
+            <div
+              key={chat.id}
+              className="p-3 flex items-center hover:bg-gray-100 cursor-pointer"
+              onClick={() => router.push(`/chat/${chat.id}`)}
+            >
+              <Avatar className="h-12 w-12">
+                <AvatarImage src={chat.picture || ""} />
+                <AvatarFallback>{chat.displayName?.substring(0, 2)?.toUpperCase() || "UN"}</AvatarFallback>
+              </Avatar>
+
+              <div className="ml-3 flex-1 overflow-hidden">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-sm font-medium text-gray-900 truncate">{chat.displayName}</h3>
+                  <span className="text-xs text-gray-500">
+                    {chat.messages && chat.messages.length > 0 
+                      ? formatTime(chat.messages[0]?.createdAt) 
+                      : formatTime(chat.updatedAt)}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 truncate">{formatLastMessage(chat)}</p>
+              </div>
+
+              {/* Add unread count indicator if needed */}
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
