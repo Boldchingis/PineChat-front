@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { MessageCircleCode } from 'lucide-react';
+import { MessageCircleCode } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -22,30 +22,30 @@ export default function LandingPage() {
       </header>
 
       <main className="relative">
-        <Image 
+        <Image
           className="w-full h-screen rounded-3xl mx-auto my-10 object-cover"
           src="/clean.png" // Ensure it's in the 'public' folder
           alt="Landing Page"
-          width={1920}  // Add width
+          width={1920} // Add width
           height={1080} // Add height
         />
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white text-center">
-        <h1 className="text-4xl font-bold text-white" style={{ WebkitTextStroke: "1px black" }}>
-  Welcome to PineChatting
-</h1>
+          <h1
+            className="text-4xl font-bold text-white"
+            style={{ WebkitTextStroke: "1px black" }}
+          >
+            Welcome to PineChatting
+          </h1>
 
-<p className="text-lg mt-2 text-white drop-shadow-[1px_1px_1px_black]">
-  Discover amazing things here
-</p>
+          <p className="text-lg mt-2 text-white drop-shadow-[1px_1px_1px_black]">
+            Discover amazing things here
+          </p>
 
           <div className="flex justify-center gap-4 mt-8">
             <Link href="/auth">
-            <Button
-  className="w-52 h-16 text-3xl rounded-full border-2 border-transparent hover:bg-green-600 transition duration-300"
->
-  Start
-</Button>
-
+              <Button className="w-52 h-16 text-3xl rounded-full border-2 border-transparent hover:bg-green-600 transition duration-300">
+                Start
+              </Button>
             </Link>
           </div>
         </div>
@@ -58,12 +58,22 @@ export default function LandingPage() {
             <p className="text-white font-bold">PineChatting</p>
           </div>
           <div className="text-white mt-5 text-center lg:text-left">
-            <p className="text-sm opacity-75">&copy; 2025 PineChatting LLC. All rights reserved.</p>
+            <p className="text-sm opacity-75">
+              &copy; 2025 PineChatting LLC. All rights reserved.
+            </p>
             <div className="flex flex-wrap justify-center lg:justify-start gap-6 mt-4">
-              <p className="text-sm opacity-75 hover:opacity-100 cursor-pointer transition-all">Terms & Privacy Policy</p>
-              <p className="text-sm opacity-75 hover:opacity-100 cursor-pointer transition-all">Help Center</p>
-              <p className="text-sm opacity-75 hover:opacity-100 cursor-pointer transition-all">Security</p>
-              <p className="text-sm opacity-75 hover:opacity-100 cursor-pointer transition-all">Contact Us</p>
+              <p className="text-sm opacity-75 hover:opacity-100 cursor-pointer transition-all">
+                Terms & Privacy Policy
+              </p>
+              <p className="text-sm opacity-75 hover:opacity-100 cursor-pointer transition-all">
+                Help Center
+              </p>
+              <p className="text-sm opacity-75 hover:opacity-100 cursor-pointer transition-all">
+                Security
+              </p>
+              <p className="text-sm opacity-75 hover:opacity-100 cursor-pointer transition-all">
+                Contact Us
+              </p>
             </div>
           </div>
           <Button className="mt-6 w-[250px] h-[70px] text-2xl bg-green-500 hover:bg-white hover:text-green-600 border-[3px] border-transparent hover:border-green-600 transition-all">

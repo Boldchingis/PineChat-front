@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Camera, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
 import LoadingAnimation from "@/public/Load.json";
 import { Toaster, toast } from "sonner";
 const Lottie = dynamic(() => import("lottie-react"), { ssr: false });
@@ -262,7 +263,7 @@ export default function ProfileManager() {
                                 rounded-full w-40 h-40 flex justify-center items-center overflow-hidden transition-all`}
                             >
                                 {image ? (
-                                    <img src={image} alt="Profile" className="w-full h-full object-cover" />
+                                    <Image src={image} width={100} height={100} alt="Profile" className="w-full h-full object-cover" />
                                 ) : loading ? (
                                     <div className="w-20 h-20">
                                         <Lottie animationData={LoadingAnimation} />

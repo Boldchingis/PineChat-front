@@ -10,7 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Search, ChevronDown, Send, Paperclip, Smile, MoreVertical, Phone, Video } from 'lucide-react';
+import { Search, Send, Paperclip, Smile, MoreVertical, Phone, Video } from 'lucide-react';
 import { Textarea } from "@/components/ui/textarea";
 
 // Mock data for development - will be replaced with real API data

@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -11,7 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Search, ChevronDown, Send, Paperclip, Smile, MoreVertical, Phone, Video, ArrowLeft } from 'lucide-react';
+import { Send, Paperclip, Smile, MoreVertical, Phone, Video, ArrowLeft } from 'lucide-react';
 import { Textarea } from "@/components/ui/textarea";
 import { Toaster, toast } from "sonner";
 
@@ -20,7 +19,9 @@ export default function ChatPage() {
   const router = useRouter();
   const chatId = params.id as string;
   const [message, setMessage] = useState("");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [chatData, setChatData] = useState<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -143,6 +144,7 @@ export default function ChatPage() {
     );
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const otherUser = chatData?.participants?.find((p: any) => p.id.toString() !== localStorage.getItem("userId"));
 
   return (
@@ -199,6 +201,7 @@ export default function ChatPage() {
               <p className="text-gray-500">No messages yet. Start the conversation!</p>
             </div>
           ) : (
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             messages.map((msg: any) => {
               const isCurrentUser = msg.senderId.toString() === localStorage.getItem("userId");
               return (

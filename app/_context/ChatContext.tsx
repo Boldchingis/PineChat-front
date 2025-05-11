@@ -93,7 +93,8 @@ export function ChatProvider({ children }: ChatProviderProps) {
   const { user, isAuthenticated } = useAuth();
 
   // Fetch chats from API
-  const fetchChats = async () => {
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const fetchChats = useCallback(async () => {
     if (!isAuthenticated || typeof window === 'undefined') return;
 
     setIsLoadingChats(true);
@@ -119,9 +120,10 @@ export function ChatProvider({ children }: ChatProviderProps) {
     } finally {
       setIsLoadingChats(false);
     }
-  };
+  });
 
   // Fetch messages for a specific chat
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const fetchMessages = async (chatId: number) => {
     if (!isAuthenticated || typeof window === 'undefined') return;
 
@@ -327,7 +329,7 @@ export function ChatProvider({ children }: ChatProviderProps) {
     if (typeof window !== 'undefined' && isAuthenticated) {
       fetchChats();
     }
-  }, [isAuthenticated]);
+  }, [fetchChats, isAuthenticated]);
 
   // Join active chat room when it changes
   useEffect(() => {
@@ -346,7 +348,7 @@ export function ChatProvider({ children }: ChatProviderProps) {
         socket.emit('leave_chat', activeChat.id.toString());
       }
     };
-  }, [socket, isConnected, activeChat]);
+  }, [socket, isConnected, activeChat, fetchMessages]);
 
   return (
     <ChatContext.Provider
@@ -367,4 +369,8 @@ export function ChatProvider({ children }: ChatProviderProps) {
       {children}
     </ChatContext.Provider>
   );
+}
+
+function useCallback(arg0: () => Promise<void>) {
+  throw new Error('Function not implemented.');
 }
