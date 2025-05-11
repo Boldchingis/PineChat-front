@@ -1,6 +1,13 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  ReactNode,
+} from 'react';
 import { useSocket } from './SocketContext';
 import { useAuth } from './AuthContext';
 
@@ -92,8 +99,6 @@ export function ChatProvider({ children }: ChatProviderProps) {
   const { socket, isConnected } = useSocket();
   const { user, isAuthenticated } = useAuth();
 
-  // Fetch chats from API
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const fetchChats = useCallback(async () => {
     if (!isAuthenticated || typeof window === 'undefined') return;
 
@@ -103,8 +108,8 @@ export function ChatProvider({ children }: ChatProviderProps) {
       const token = localStorage.getItem('accessToken');
       const response = await fetch('http://localhost:5000/chat', {
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       if (!response.ok) {
@@ -120,39 +125,39 @@ export function ChatProvider({ children }: ChatProviderProps) {
     } finally {
       setIsLoadingChats(false);
     }
-  });
+  }, [isAuthenticated]);
 
-  // Fetch messages for a specific chat
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const fetchMessages = async (chatId: number) => {
-    if (!isAuthenticated || typeof window === 'undefined') return;
+  const fetchMessages = useCallback(
+    async (chatId: number) => {
+      if (!isAuthenticated || typeof window === 'undefined') return;
 
-    setIsLoadingMessages(true);
+      setIsLoadingMessages(true);
 
-    try {
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch(`http://localhost:5000/chat/${chatId}/messages`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
+      try {
+        const token = localStorage.getItem('accessToken');
+        const response = await fetch(`http://localhost:5000/chat/${chatId}/messages`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch messages');
         }
-      });
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch messages');
+        const data = await response.json();
+        if (data.success) {
+          setMessages(data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching messages:', error);
+      } finally {
+        setIsLoadingMessages(false);
       }
+    },
+    [isAuthenticated]
+  );
 
-      const data = await response.json();
-      if (data.success) {
-        setMessages(data.data);
-      }
-    } catch (error) {
-      console.error('Error fetching messages:', error);
-    } finally {
-      setIsLoadingMessages(false);
-    }
-  };
-
-  // Create a new chat
   const createChat = async (userId: number): Promise<Chat | null> => {
     if (!isAuthenticated || typeof window === 'undefined') return null;
 
@@ -162,12 +167,12 @@ export function ChatProvider({ children }: ChatProviderProps) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           participants: [userId],
-          isGroup: false
-        })
+          isGroup: false,
+        }),
       });
 
       if (!response.ok) {
@@ -176,9 +181,8 @@ export function ChatProvider({ children }: ChatProviderProps) {
 
       const data = await response.json();
       if (data.success) {
-        // Add the new chat to the chats list
         if (data.code !== 'CHAT_EXISTS') {
-          setChats(prevChats => [data.data, ...prevChats]);
+          setChats((prevChats) => [data.data, ...prevChats]);
         }
         return data.data;
       }
@@ -189,17 +193,19 @@ export function ChatProvider({ children }: ChatProviderProps) {
     }
   };
 
-  // Search users
   const searchUsers = async (query: string): Promise<ChatUser[]> => {
     if (!isAuthenticated || !query.trim() || typeof window === 'undefined') return [];
 
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`http://localhost:5000/chat/search/users?query=${encodeURIComponent(query)}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
+      const response = await fetch(
+        `http://localhost:5000/chat/search/users?query=${encodeURIComponent(query)}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }
-      });
+      );
 
       if (!response.ok) {
         throw new Error('Failed to search users');
@@ -216,7 +222,6 @@ export function ChatProvider({ children }: ChatProviderProps) {
     }
   };
 
-  // Send a message
   const sendMessage = async (content: string): Promise<boolean> => {
     if (!isAuthenticated || !activeChat || !content.trim() || !socket || typeof window === 'undefined') {
       return false;
@@ -226,17 +231,16 @@ export function ChatProvider({ children }: ChatProviderProps) {
       if (activeChat.isGroup) {
         socket.emit('group_message', {
           content,
-          chatId: activeChat.id
+          chatId: activeChat.id,
         });
       } else {
-        // Find the recipient (the other user in the chat)
-        const recipient = activeChat.participants.find(p => p.id !== user?.id);
+        const recipient = activeChat.participants.find((p) => p.id !== user?.id);
         if (!recipient) return false;
 
         socket.emit('private_message', {
           content,
           chatId: activeChat.id,
-          receiverId: recipient.id
+          receiverId: recipient.id,
         });
       }
 
@@ -247,26 +251,21 @@ export function ChatProvider({ children }: ChatProviderProps) {
     }
   };
 
-  // Set up socket event listeners
   useEffect(() => {
-    // Only run in browser
     if (typeof window === 'undefined' || !socket || !isConnected) return;
 
-    // Handle incoming messages
     socket.on('new_message', (message: Message) => {
-      // Add the message to the messages list if it belongs to the active chat
       if (activeChat && message.chatId === activeChat.id) {
-        setMessages(prevMessages => [...prevMessages, message]);
+        setMessages((prevMessages) => [...prevMessages, message]);
       }
 
-      // Update the chat with the new message
-      setChats(prevChats =>
-        prevChats.map(chat => {
+      setChats((prevChats) =>
+        prevChats.map((chat) => {
           if (chat.id === message.chatId) {
             return {
               ...chat,
               lastMessage: message,
-              updatedAt: new Date().toISOString()
+              updatedAt: new Date().toISOString(),
             };
           }
           return chat;
@@ -274,21 +273,18 @@ export function ChatProvider({ children }: ChatProviderProps) {
       );
     });
 
-    // Handle sent message confirmation
     socket.on('message_sent', (message: Message) => {
-      // Add the message to the messages list if it belongs to the active chat
       if (activeChat && message.chatId === activeChat.id) {
-        setMessages(prevMessages => [...prevMessages, message]);
+        setMessages((prevMessages) => [...prevMessages, message]);
       }
 
-      // Update the chat with the new message
-      setChats(prevChats =>
-        prevChats.map(chat => {
+      setChats((prevChats) =>
+        prevChats.map((chat) => {
           if (chat.id === message.chatId) {
             return {
               ...chat,
               lastMessage: message,
-              updatedAt: new Date().toISOString()
+              updatedAt: new Date().toISOString(),
             };
           }
           return chat;
@@ -296,18 +292,13 @@ export function ChatProvider({ children }: ChatProviderProps) {
       );
     });
 
-    // Handle user status changes
     socket.on('user_status', ({ userId, status }) => {
-      // Update user status in chats
-      setChats(prevChats =>
-        prevChats.map(chat => {
+      setChats((prevChats) =>
+        prevChats.map((chat) => {
           if (!chat.isGroup) {
-            const updatedParticipants = chat.participants.map(p => {
-              if (p.id === userId) {
-                return { ...p, status };
-              }
-              return p;
-            });
+            const updatedParticipants = chat.participants.map((p) =>
+              p.id === userId ? { ...p, status } : p
+            );
             return { ...chat, participants: updatedParticipants };
           }
           return chat;
@@ -315,7 +306,6 @@ export function ChatProvider({ children }: ChatProviderProps) {
       );
     });
 
-    // Clean up event listeners on unmount
     return () => {
       socket.off('new_message');
       socket.off('message_sent');
@@ -323,26 +313,19 @@ export function ChatProvider({ children }: ChatProviderProps) {
     };
   }, [socket, isConnected, activeChat]);
 
-  // Fetch chats when authenticated
   useEffect(() => {
-    // Only run in browser
     if (typeof window !== 'undefined' && isAuthenticated) {
       fetchChats();
     }
   }, [fetchChats, isAuthenticated]);
 
-  // Join active chat room when it changes
   useEffect(() => {
-    // Only run in browser
     if (typeof window === 'undefined' || !socket || !isConnected || !activeChat) return;
 
-    // Join the chat room
     socket.emit('join_chat', activeChat.id.toString());
 
-    // Fetch messages for the active chat
     fetchMessages(activeChat.id);
 
-    // Clean up when component unmounts or active chat changes
     return () => {
       if (activeChat) {
         socket.emit('leave_chat', activeChat.id.toString());
@@ -363,14 +346,10 @@ export function ChatProvider({ children }: ChatProviderProps) {
         fetchChats,
         fetchMessages,
         createChat,
-        searchUsers
+        searchUsers,
       }}
     >
       {children}
     </ChatContext.Provider>
   );
-}
-
-function useCallback(arg0: () => Promise<void>) {
-  throw new Error('Function not implemented.');
 }
